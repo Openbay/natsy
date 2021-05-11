@@ -44,7 +44,7 @@ module RubyNestNats
         fiber = Fiber.new do
           NATS.start do
             replies.each do |replier|
-              NATS.subscribe(replier[:subject], queue: reply[:queue]) do |message, reply, _subject|
+              NATS.subscribe(replier[:subject], queue: replier[:queue]) do |message, reply, _subject|
                 response = replier[:handler].call(JSON.parse(message)["data"])
                 NATS.publish(reply, response.to_json, queue: reply[:queue])
               end
