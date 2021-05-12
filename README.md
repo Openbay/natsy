@@ -45,6 +45,7 @@ gem install ruby_nest_nats
 Attach a logger to have `ruby_nest_nats` write out logs for messages received, responses sent, errors raised, lifecycle events, etc.
 
 ```rb
+require 'ruby_nest_nats'
 require 'logger'
 
 nats_logger = Logger.new(STDOUT)
