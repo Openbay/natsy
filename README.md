@@ -4,6 +4,14 @@ Welcome to your new gem! In this directory, you'll find the files you need to be
 
 TODO: Delete this and the text above, and describe your gem
 
+## TODO
+
+- [ ] docs
+- [ ] tests
+- [ ] multiple queues
+- [ ] `on_error` handler so you can send a response (what's standard?)
+- [ ] config for restart behavior (default is to restart listening on any `StandardError`)
+
 ## Installation
 
 Add this line to your application's Gemfile:
