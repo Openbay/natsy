@@ -21,6 +21,9 @@ module RubyNestNats
       #     end
       #
       def default_queue(some_queue = NO_QUEUE_GIVEN)
+        # `NO_QUEUE_GIVEN` is a special symbol (rather than `nil`) so that the
+        # default queue can be "unset" to `nil` (given a non-`nil` global
+        # default set with `RubyNestNats::Client::default_queue=`).
         if some_queue == NO_QUEUE_GIVEN
           @default_queue || Client.default_queue
         else

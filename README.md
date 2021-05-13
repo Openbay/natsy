@@ -12,6 +12,7 @@ The `ruby_nest_nats` gem allows you to listen for (and reply to) NATS messages a
 - [ ] `on_error` handler so you can send a response (what's standard?)
 - [ ] config options for URL/host/port/etc.
 - [ ] config for restart behavior (default is to restart listening on any `StandardError`)
+- [ ] consider using child processes instead of threads
 
 ## Installation
 
@@ -36,6 +37,10 @@ Alternatively, install it globally:
 ```bash
 gem install ruby_nest_nats
 ```
+
+### NATS server
+
+**IMPORTANT:** This gem also requires a NATS server to be installed and running before use. See [the NATS documentation](https://docs.nats.io/nats-server/installation) for more details.
 
 ## Usage
 
@@ -70,6 +75,8 @@ The following will be logged at the specified log levels
 - `WARN`: Error handled gracefully (listening restarted due to some exception, etc.), as well as everything under `ERROR`
 - `ERROR`: Some exception was raised in-thread (error in handler, error in subscription, etc.)
 
+<a id="default-queue-section"></a>
+
 ### Setting a default queue
 
 Set a default queue for subscriptions.
@@ -83,6 +90,8 @@ Leave the `::default_queue` blank (or assign `nil`) to use no default queue.
 ```rb
 RubyNestNats::Client.default_queue = nil
 ```
+
+<a id="reply-to-section"></a>
 
 ### Registering message handlers
 
@@ -118,10 +127,20 @@ Start listening for messages with the `RubyNestNats::Client::start!` method. Thi
 RubyNestNats::Client.start!
 ```
 
-### Full example
+### Basic full working example (in vanilla Ruby)
+
+The following should be enough to start a `ruby_nest_nats` setup in your Ruby application, using what we've learned so far.
+
+> **NOTE:** For a more organized structure and implementation in a larger app (like a Rails project), see the ["controller" section below](#controller-section).
 
 ```rb
-RubyNestNats::Client.logger = Rails.logger
+require 'ruby_nest_nats'
+require 'logger'
+
+nats_logger = Logger.new(STDOUT)
+nats_logger.level = Logger::DEBUG
+
+RubyNestNats::Client.logger = nats_logger
 RubyNestNats::Client.default_queue = "foobar"
 
 RubyNestNats::Client.reply_to("some.subject") { |data| "Got it! #{data.inspect}" }
@@ -130,6 +149,86 @@ RubyNestNats::Client.reply_to("subject.in.queue", queue: "barbaz") { { msg: "My 
 
 RubyNestNats::Client.start!
 ```
+
+> **NOTE:** You _can_ invoke `::reply_to` to create additional message subscriptions after `RubyNestNats::Client.start!`, but be aware that this forces the client to restart. You may see (benign, already-handled) errors in the logs generated when this restart happens. It will force the client to restart and re-subscribe after _each additional `::reply_to` invoked after `::start!`._ So, if you have a lot of additional `::reply_to` invocations, you may want to consider refactoring so that your call to `RubyNestNats::Client.start!` occurs _after_ those additions.
+
+> **NOTE:** The `::start!` method can be safely called multiple times; only the first will be honored, and any subsequent calls to `::start!` after the client is already started will do nothing (except write a _"NATS is already running"_ log to the logger at the `DEBUG` level).
+
+<a id="controller-section"></a>
+
+### Creating "controller"-style classes for listener organization
+
+Create controller classes which inherit from `RubyNestNats::Controller` in order to give your message listeners some structure.
+
+Use the `::default_queue` macro to set a default queue string. If omitted, the controller will fall back on the default queue assigned with `RubyNestNats::Client::default_queue=` (as described [here](#default-queue-section)). If no default queue is set in either the controller or globally, then the default queue will be blank.
+
+Use the `::subject` macro to create a block for listening to that subject segment. Nested calls to `::subject` will append each subsequent subject/pattern string to the last (joined by a periods). There is no limit to the level of nesting.
+
+You can register a response for the built-up subject/pattern string using the `::response` macro. Pass a block to `::response` which optionally takes two arguments ([the same arguments supplied to `RubyNestNats::Client::reply_to`](#reply-to-section)). The result of that block will be sent as a response to the message received.
+
+```rb
+class HelloController < RubyNestNats::Controller
+  default_queue "foobar"
+
+  subject "hello" do
+    subject "jerk" do
+      response do |data|
+        # The subject at this point is "hello.jerk"
+        "Hey #{data['name']}... that's not cool, man."
+      end
+    end
+
+    subject "and" do
+      subject "wassup" do
+        response do |data|
+          # The subject at this point is "hello.and.wassup"
+          "Hey, how ya doin', #{data['name']}?"
+        end
+      end
+
+      subject "goodbye" do
+        response do |data|
+          # The subject at this point is "hello.and.goodbye"
+          "Hi #{data['name']}! But also GOODBYE."
+        end
+      end
+    end
+  end
+
+  subject "hows" do
+    subject "*" do
+      subject "doing" do
+        response do |data, subject|
+          # The subject at this point is "hows.<wildcard>.doing" (i.e., the
+          # subjects "hows.jack.doing" and "hows.jill.doing" will both match)
+          sender_name = data["name"]
+          other_person_name = subject.split(".")[1]
+          desc = rand < 0.5 ? "terribly" : "great"
+          "Well, #{sender_name}, #{other_person_name} is actually doing #{desc}."
+        end
+      end
+    end
+  end
+end
+```
+
+> **NOTE:** If you implement controllers like this and you are using code-autoloading machinery (like Zeitwerk in Rails), you will need to make sure these paths are eager-loaded when your app starts. **If you don't, `ruby_nest_nats` will not register the listeners,** and will not respond to messages for the specified subjects.
+>
+> For example: in a Rails project (assuming you have your NATS controllers in a directory called `app/nats/`), you may want to put something like the following in an initializer (such as `config/initializers/nats.rb`):
+>
+> ```rb
+> RubyNestNats::Client.logger = Rails.logger
+> RubyNestNats::Client.default_queue = "foobar"
+>
+> # ...
+>
+> Rails.application.config.after_initialize do
+>   nats_controller_paths = Dir[Rails.root.join("app", "nats", "**", "*_controller.rb")]
+>   nats_controller_paths.each { |file_path| require_dependency(file_path) }
+>
+>   RubyNestNats::Client.start!
+> end
+> ```
 
 ## Development
 
@@ -141,7 +240,7 @@ To install the Ruby dependencies, run:
 bin/setup
 ```
 
-This gem also requires a NATS server to be running. See [the NATS documentation](https://docs.nats.io/nats-server/installation) for more details.
+This gem also requires a NATS server to be installed and running. See [the NATS documentation](https://docs.nats.io/nats-server/installation) for more details.
 <!-- sudo docker run -p 4222:4222 -p 8222:8222 -p 6222:6222 -ti nats:latest -->
 <!-- nats-tail -s nats://localhost:4222 ">" -->
 <!-- curl --data '{"name":"Keegan"}' --header 'Content-Type: application/json' http://localhost:3000/hello -->
