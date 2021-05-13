@@ -6,7 +6,8 @@ The `ruby_nest_nats` gem allows you to listen for (and reply to) NATS messages a
 
 - [x] docs
 - [ ] tests
-- [ ] "controller"-style classes for reply organization
+- [x] "controller"-style classes for reply organization
+- [x] runtime subscription additions
 - [x] multiple queues
 - [ ] `on_error` handler so you can send a response (what's standard?)
 - [ ] config options for URL/host/port/etc.
