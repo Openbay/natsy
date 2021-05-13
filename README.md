@@ -38,11 +38,23 @@ Alternatively, install it globally:
 gem install ruby_nest_nats
 ```
 
-### NATS server
+### NATS server (important!)
 
-**IMPORTANT:** This gem also requires a NATS server to be installed and running before use. See [the NATS documentation](https://docs.nats.io/nats-server/installation) for more details.
+This gem also requires a NATS server to be installed and running before use. See [the NATS documentation](https://docs.nats.io/nats-server/installation) for more details.
 
 ## Usage
+
+### Starting the NATS server
+
+You'll need to start a NATS server before running your Ruby application. If you installed it via Docker, you might start it like so:
+
+```bash
+docker run -p 4222:4222 -p 8222:8222 -p 6222:6222 -ti nats:latest
+```
+
+> **NOTE:** You may need to run that command with `sudo` on some systems, depending on the permissions of your Docker installation.
+
+> **NOTE:** For other methods of running a NATS server, see [the NATS documentation](https://docs.nats.io/nats-server/installation).
 
 ### Logging
 
@@ -121,11 +133,15 @@ end
 
 Start listening for messages with the `RubyNestNats::Client::start!` method. This will spin up a non-blocking thread that subscribes to subjects (as specified by invocation(s) of `::reply_to`) and waits for messages to come in. When a message is received, the appropriate `::reply_to` block will be used to compute a response, and that response will be published.
 
-> **NOTE:** If an error is raised in one of the handlers, `RubyNestNats::Client` will restart automatically.
-
 ```rb
 RubyNestNats::Client.start!
 ```
+
+> **NOTE:** If an error is raised in one of the handlers, `RubyNestNats::Client` will restart automatically.
+
+> **NOTE:** You _can_ invoke `::reply_to` to create additional message subscriptions after `RubyNestNats::Client.start!`, but be aware that this forces the client to restart. You may see (benign, already-handled) errors in the logs generated when this restart happens. It will force the client to restart and re-subscribe after _each additional `::reply_to` invoked after `::start!`._ So, if you have a lot of additional `::reply_to` invocations, you may want to consider refactoring so that your call to `RubyNestNats::Client.start!` occurs _after_ those additions.
+
+> **NOTE:** The `::start!` method can be safely called multiple times; only the first will be honored, and any subsequent calls to `::start!` after the client is already started will do nothing (except write a _"NATS is already running"_ log to the logger at the `DEBUG` level).
 
 ### Basic full working example (in vanilla Ruby)
 
@@ -150,21 +166,17 @@ RubyNestNats::Client.reply_to("subject.in.queue", queue: "barbaz") { { msg: "My 
 RubyNestNats::Client.start!
 ```
 
-> **NOTE:** You _can_ invoke `::reply_to` to create additional message subscriptions after `RubyNestNats::Client.start!`, but be aware that this forces the client to restart. You may see (benign, already-handled) errors in the logs generated when this restart happens. It will force the client to restart and re-subscribe after _each additional `::reply_to` invoked after `::start!`._ So, if you have a lot of additional `::reply_to` invocations, you may want to consider refactoring so that your call to `RubyNestNats::Client.start!` occurs _after_ those additions.
-
-> **NOTE:** The `::start!` method can be safely called multiple times; only the first will be honored, and any subsequent calls to `::start!` after the client is already started will do nothing (except write a _"NATS is already running"_ log to the logger at the `DEBUG` level).
-
 <a id="controller-section"></a>
 
 ### Creating "controller"-style classes for listener organization
 
 Create controller classes which inherit from `RubyNestNats::Controller` in order to give your message listeners some structure.
 
-Use the `::default_queue` macro to set a default queue string. If omitted, the controller will fall back on the default queue assigned with `RubyNestNats::Client::default_queue=` (as described [here](#default-queue-section)). If no default queue is set in either the controller or globally, then the default queue will be blank.
+Use the `::default_queue` macro to set a default queue string. If omitted, the controller will fall back on the global default queue assigned with `RubyNestNats::Client::default_queue=` (as described [here](#default-queue-section)). If no default queue is set in either the controller or globally, then the default queue will be blank. Set the default queue to `nil` in a controller to override the global default queue and explicitly make the default queue blank for that controller.
 
 Use the `::subject` macro to create a block for listening to that subject segment. Nested calls to `::subject` will append each subsequent subject/pattern string to the last (joined by a periods). There is no limit to the level of nesting.
 
-You can register a response for the built-up subject/pattern string using the `::response` macro. Pass a block to `::response` which optionally takes two arguments ([the same arguments supplied to `RubyNestNats::Client::reply_to`](#reply-to-section)). The result of that block will be sent as a response to the message received.
+You can register a response for the built-up subject/pattern string using the `::response` macro. Pass a block to `::response` which optionally takes two arguments ([the same arguments supplied to the block of `RubyNestNats::Client::reply_to`](#reply-to-section)). The result of that block will be sent as a response to the message received.
 
 ```rb
 class HelloController < RubyNestNats::Controller

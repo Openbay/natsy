@@ -26,6 +26,7 @@ Layout/FirstArrayElementIndentation:
 # Metrics
 
 Metrics/AbcSize:
+  Max: 30
   CountRepeatedAttributes: false
   Exclude:
     - 'spec/**/*_spec.rb'
