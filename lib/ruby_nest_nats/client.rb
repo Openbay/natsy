@@ -1,4 +1,5 @@
 require "json"
+require "nats/client"
 require_relative "./utils"
 
 module RubyNestNats
@@ -37,6 +38,18 @@ module RubyNestNats
         register_reply!(subject: subject.to_s, handler: block, queue: queue.to_s)
       end
 
+      def thread_queue
+        @thread_queue ||= Queue.new
+      end
+
+      def current_thread
+        @current_thread
+      end
+
+      def current_thread=(some_thread)
+        @current_thread = some_thread
+      end
+
       def listen
         NATS.start do
           replies.each do |replier|
@@ -63,6 +76,10 @@ module RubyNestNats
               NATS.publish(inbox, response_data.to_json, queue: replier[:queue])
             end
           end
+
+          # while thing = thread_queue.pop
+          #   log("found queued thing: #{thing}")
+          # end
         end
       end
 
@@ -88,14 +105,21 @@ module RubyNestNats
 
         started!
 
-        Thread.new do
+        self.current_thread = Thread.new do
           Thread.handle_interrupt(StandardError => :never) do
             begin
               Thread.handle_interrupt(StandardError => :immediate) { listen }
-            rescue => e
+            rescue NATS::ConnectError => e
+              log("Could not connect to NATS server:", level: :error)
+              log(e.full_message, level: :error, indent: 2)
+              Thread.current.exit
+            rescue NewSubscriptionsError => e
+              log("New subscriptions! Restarting...", level: :info)
+              restart!
+              raise e # TODO: there has to be a better way
+            rescue StandardError => e
               log("Encountered an error:", level: :error)
               log(e.full_message, level: :error, indent: 2)
-
               restart!
               raise e
             end
@@ -135,7 +159,11 @@ module RubyNestNats
       end
 
       def register_reply!(subject:, handler:, queue: nil)
-        raise StandardError, "NATS already started" if started? # TODO: remove when runtime additions are implemented
+        # if started?
+        #   thread_queue.push("subject: #{subject}, handler: #{handler}, queue: #{queue}")
+        #   return
+        # end
+        # raise StandardError, "NATS already started" if started? # TODO: remove when runtime additions are implemented
         raise ArgumentError, "Subject must be a string" unless subject.is_a?(String)
         raise ArgumentError, "Must provide a message handler for #{subject}" unless handler.respond_to?(:call)
         raise ArgumentError, "Already registered a reply to #{subject}" if reply_registered?(subject)
@@ -147,6 +175,8 @@ module RubyNestNats
         }
 
         replies << reply
+
+        self.current_thread.raise(NewSubscriptionsError, "New reply registered") if started?
       end
     end
   end

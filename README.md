@@ -141,6 +141,9 @@ bin/setup
 ```
 
 This gem also requires a NATS server to be running. See [the NATS documentation](https://docs.nats.io/nats-server/installation) for more details.
+<!-- sudo docker run -p 4222:4222 -p 8222:8222 -p 6222:6222 -ti nats:latest -->
+<!-- nats-tail -s nats://localhost:4222 ">" -->
+<!-- curl --data '{"name":"Keegan"}' --header 'Content-Type: application/json' http://localhost:3000/hello -->
 
 ### Open a console
 

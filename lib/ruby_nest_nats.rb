@@ -8,4 +8,5 @@ require_relative "ruby_nest_nats/controller"
 
 module RubyNestNats
   class Error < StandardError; end
+  class NewSubscriptionsError < StandardError; end
 end
