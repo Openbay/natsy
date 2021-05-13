@@ -62,7 +62,7 @@ docker run -p 4222:4222 -p 8222:8222 -p 6222:6222 -ti nats:latest
 
 Attach a logger to have `ruby_nest_nats` write out logs for messages received, responses sent, errors raised, lifecycle events, etc.
 
-```rb
+```ruby
 require 'ruby_nest_nats'
 require 'logger'
 
@@ -74,7 +74,7 @@ RubyNestNats::Client.logger = nats_logger
 
 In a Rails application, you might do this instead:
 
-```rb
+```ruby
 RubyNestNats::Client.logger = Rails.logger
 ```
 
@@ -93,13 +93,13 @@ The following will be logged at the specified log levels
 
 Set a default queue for subscriptions.
 
-```rb
+```ruby
 RubyNestNats::Client.default_queue = "foobar"
 ```
 
 Leave the `::default_queue` blank (or assign `nil`) to use no default queue.
 
-```rb
+```ruby
 RubyNestNats::Client.default_queue = nil
 ```
 
@@ -111,7 +111,7 @@ Register a message handler with the `RubyNestNats::Client::reply_to` method. Pas
 
 The result of the given block will be published in reply to the message. The block is passed two arguments when a message matching the subject is received: `data` and `subject`. The `data` argument is the payload of the message (JSON objects/arrays will be parsed into string-keyed `Hash` objects/`Array` objects, respectively). The `subject` argument is the subject of the message received (mostly only useful if a _pattern_ was specified instead of a static subject string).
 
-```rb
+```ruby
 RubyNestNats::Client.reply_to("some.subject", queue: "foobar") { |data| "Got it! #{data.inspect}" }
 
 RubyNestNats::Client.reply_to("some.*.pattern") { |data, subject| "Got #{data} on #{subject}" }
@@ -133,7 +133,7 @@ end
 
 Start listening for messages with the `RubyNestNats::Client::start!` method. This will spin up a non-blocking thread that subscribes to subjects (as specified by invocation(s) of `::reply_to`) and waits for messages to come in. When a message is received, the appropriate `::reply_to` block will be used to compute a response, and that response will be published.
 
-```rb
+```ruby
 RubyNestNats::Client.start!
 ```
 
@@ -149,7 +149,7 @@ The following should be enough to start a `ruby_nest_nats` setup in your Ruby ap
 
 > **NOTE:** For a more organized structure and implementation in a larger app (like a Rails project), see the ["controller" section below](#controller-section).
 
-```rb
+```ruby
 require 'ruby_nest_nats'
 require 'logger'
 
@@ -178,7 +178,7 @@ Use the `::subject` macro to create a block for listening to that subject segmen
 
 You can register a response for the built-up subject/pattern string using the `::response` macro. Pass a block to `::response` which optionally takes two arguments ([the same arguments supplied to the block of `RubyNestNats::Client::reply_to`](#reply-to-section)). The result of that block will be sent as a response to the message received.
 
-```rb
+```ruby
 class HelloController < RubyNestNats::Controller
   default_queue "foobar"
 
@@ -228,7 +228,7 @@ end
 >
 > For example: in a Rails project (assuming you have your NATS controllers in a directory called `app/nats/`), you may want to put something like the following in an initializer (such as `config/initializers/nats.rb`):
 >
-> ```rb
+> ```ruby
 > RubyNestNats::Client.logger = Rails.logger
 > RubyNestNats::Client.default_queue = "foobar"
 >
