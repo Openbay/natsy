@@ -9,9 +9,9 @@ require_relative "ruby_nest_nats/controller"
 # The +RubyNestNats+ module provides the top-level namespace for the NATS client
 # and controller machinery.
 module RubyNestNats
-  # :nodoc:
+  # Basic error
   class Error < StandardError; end
 
-  # :nodoc:
+  # New subscription has been added at runtime
   class NewSubscriptionsError < RubyNestNats::Error; end
 end

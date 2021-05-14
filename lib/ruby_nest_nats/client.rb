@@ -10,9 +10,6 @@ module RubyNestNats
   # most functionality if desired.
   class Client
     class << self
-      # :nodoc:
-      attr_reader :logger, :default_queue
-
       # Attach a logger to have +ruby_nest_nats+ write out logs for messages
       # received, responses sent, errors raised, lifecycle events, etc.
       #
@@ -164,6 +161,8 @@ module RubyNestNats
       end
 
       private
+
+      attr_reader :logger, :default_queue
 
       def log(text, level: :info, indent: 0)
         return unless logger

@@ -6,8 +6,8 @@ module RubyNestNats
   # Create controller classes which inherit from +RubyNestNats::Controller+ in
   # order to give your message listeners some structure.
   class Controller
-    # :nodoc:
     NO_QUEUE_GIVEN = :ruby_nest_nats_super_special_no_op_queue_symbol_qwertyuiop1234567890
+    private_constant :NO_QUEUE_GIVEN
 
     class << self
       # Default queue for the controller. Falls back to the client's default
