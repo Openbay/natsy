@@ -35,6 +35,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rubocop-rake", "~> 0.5"
   spec.add_development_dependency "rubocop-rspec", "~> 2.2"
   spec.add_development_dependency "solargraph"
+  spec.add_development_dependency "pry"
 
   spec.add_runtime_dependency "nats", "~> 0.11"
 end

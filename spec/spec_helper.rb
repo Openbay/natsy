@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "pry"
 require "ruby_nest_nats"
 
 RSpec.configure do |config|

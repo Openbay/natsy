@@ -10,6 +10,12 @@ module RubyNestNats
   # most functionality if desired.
   class Client
     class << self
+      # Optional logger for lifecycle events, messages received, etc.
+      attr_reader :logger
+
+      # Optional default queue for message subscription and replies.
+      attr_reader :default_queue
+
       # Attach a logger to have +ruby_nest_nats+ write out logs for messages
       # received, responses sent, errors raised, lifecycle events, etc.
       #
@@ -28,8 +34,8 @@ module RubyNestNats
       #   RubyNestNats::Client.logger = Rails.logger
       #
       def logger=(some_logger)
-        log("Setting the logger to #{some_logger.inspect}")
         @logger = some_logger
+        log("Set the logger to #{@logger.inspect}")
       end
 
       # Set a default queue for subscriptions.
@@ -44,9 +50,8 @@ module RubyNestNats
       #   RubyNestNats::Client.default_queue = nil
       #
       def default_queue=(some_queue)
-        queue = Utils.presence(some_queue.to_s)
-        log("Setting the default queue to #{queue || '(none)'}", level: :debug)
-        @default_queue = queue
+        @default_queue = Utils.presence(some_queue.to_s)
+        log("Setting the default queue to #{@default_queue || '(none)'}", level: :debug)
       end
 
       # Returns +true+ if +::start!+ has already been called (meaning the client
@@ -162,7 +167,7 @@ module RubyNestNats
 
       private
 
-      attr_reader :logger, :default_queue
+      attr_accessor :current_thread
 
       def log(text, level: :info, indent: 0)
         return unless logger
@@ -174,6 +179,10 @@ module RubyNestNats
         text_lines.each do |line|
           logger.send(level, "[#{timestamp}] RubyNestNats | #{indentation}#{line}")
         end
+      end
+
+      def kill!
+        current_thread.kill if current_thread && current_thread.alive?
       end
 
       def stop!
@@ -205,8 +214,6 @@ module RubyNestNats
       def replies
         @replies ||= []
       end
-
-      attr_accessor :current_thread
 
       def reply_registered?(raw_subject)
         subject = raw_subject.to_s
