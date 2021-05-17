@@ -351,6 +351,12 @@ rake spec
 bundle exec rubocop
 ```
 
+...or (if your Ruby setup has good defaults) just this:
+
+```bash
+rubocop
+```
+
 ### Create a release
 
 Bump the `Natsy::VERSION` value in `lib/natsy/version.rb`, commit, and then run:
