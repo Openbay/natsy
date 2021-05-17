@@ -3,7 +3,7 @@
 require "logger"
 require "nats/client"
 
-RSpec.describe RubyNestNats::Client do
+RSpec.describe Natsy::Client do
   describe "::logger=" do
     before do
       described_class.logger = nil

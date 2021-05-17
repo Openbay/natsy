@@ -4,8 +4,8 @@ require "json"
 require "nats/client"
 require_relative "./utils"
 
-module RubyNestNats
-  # The +RubyNestNats::Client+ class provides a basic interface for subscribing
+module Natsy
+  # The +Natsy::Client+ class provides a basic interface for subscribing
   # to messages by subject & queue, and replying to those messages. It also logs
   # most functionality if desired.
   class Client
@@ -16,22 +16,22 @@ module RubyNestNats
       # Optional default queue for message subscription and replies.
       attr_reader :default_queue
 
-      # Attach a logger to have +ruby_nest_nats+ write out logs for messages
+      # Attach a logger to have +natsy+ write out logs for messages
       # received, responses sent, errors raised, lifecycle events, etc.
       #
       # @example
-      #   require 'ruby_nest_nats'
+      #   require 'natsy'
       #   require 'logger'
       #
       #   nats_logger = Logger.new(STDOUT)
       #   nats_logger.level = Logger::INFO
       #
-      #   RubyNestNats::Client.logger = nats_logger
+      #   Natsy::Client.logger = nats_logger
       #
       # In a Rails application, you might do this instead:
       #
       # @example
-      #   RubyNestNats::Client.logger = Rails.logger
+      #   Natsy::Client.logger = Rails.logger
       #
       def logger=(some_logger)
         @logger = some_logger
@@ -41,13 +41,13 @@ module RubyNestNats
       # Set a default queue for subscriptions.
       #
       # @example
-      #   RubyNestNats::Client.default_queue = "foobar"
+      #   Natsy::Client.default_queue = "foobar"
       #
       # Leave the +::default_queue+ blank (or assign +nil+) to use no default
       # queue.
       #
       # @example
-      #   RubyNestNats::Client.default_queue = nil
+      #   Natsy::Client.default_queue = nil
       #
       def default_queue=(some_queue)
         @default_queue = Utils.presence(some_queue.to_s)
@@ -68,7 +68,7 @@ module RubyNestNats
         !started?
       end
 
-      # Register a message handler with the +RubyNestNats::Client::reply_to+
+      # Register a message handler with the +Natsy::Client::reply_to+
       # method. Pass a subject string as the first argument (either a static
       # subject string or a pattern to match more than one subject). Specify a
       # queue (or don't) with the +queue:+ option. If you don't provide the
@@ -84,11 +84,11 @@ module RubyNestNats
       # specified instead of a static subject string).
       #
       # @example
-      #   RubyNestNats::Client.reply_to("some.subject", queue: "foobar") { |data| "Got it! #{data.inspect}" }
+      #   Natsy::Client.reply_to("some.subject", queue: "foobar") { |data| "Got it! #{data.inspect}" }
       #
-      #   RubyNestNats::Client.reply_to("some.*.pattern") { |data, subject| "Got #{data} on #{subject}" }
+      #   Natsy::Client.reply_to("some.*.pattern") { |data, subject| "Got #{data} on #{subject}" }
       #
-      #   RubyNestNats::Client.reply_to("other.subject") do |data|
+      #   Natsy::Client.reply_to("other.subject") do |data|
       #     if data["foo"] == "bar"
       #       { is_bar: "Yep!" }
       #     else
@@ -96,7 +96,7 @@ module RubyNestNats
       #     end
       #   end
       #
-      #   RubyNestNats::Client.reply_to("subject.in.queue", queue: "barbaz") do
+      #   Natsy::Client.reply_to("subject.in.queue", queue: "barbaz") do
       #     "My turn!"
       #   end
       #
@@ -107,7 +107,7 @@ module RubyNestNats
         register_reply!(subject: subject.to_s, handler: block, queue: queue.to_s)
       end
 
-      # Start listening for messages with the +RubyNestNats::Client::start!+
+      # Start listening for messages with the +Natsy::Client::start!+
       # method. This will spin up a non-blocking thread that subscribes to
       # subjects (as specified by invocation(s) of +::reply_to+) and waits for
       # messages to come in. When a message is received, the appropriate
@@ -115,19 +115,19 @@ module RubyNestNats
       # will be published.
       #
       # @example
-      #   RubyNestNats::Client.start!
+      #   Natsy::Client.start!
       #
       # **NOTE:** If an error is raised in one of the handlers,
-      # +RubyNestNats::Client+ will restart automatically.
+      # +Natsy::Client+ will restart automatically.
       #
       # **NOTE:** You _can_ invoke +::reply_to+ to create additional message
-      # subscriptions after +RubyNestNats::Client.start!+, but be aware that
+      # subscriptions after +Natsy::Client.start!+, but be aware that
       # this forces the client to restart. You may see (benign, already-handled)
       # errors in the logs generated when this restart happens. It will force
       # the client to restart and re-subscribe after _each additional
       # +::reply_to+ invoked after +::start!+._ So, if you have a lot of
       # additional +::reply_to+ invocations, you may want to consider
-      # refactoring so that your call to +RubyNestNats::Client.start!+ occurs
+      # refactoring so that your call to +Natsy::Client.start!+ occurs
       # _after_ those additions.
       #
       # **NOTE:** The +::start!+ method can be safely called multiple times;
@@ -177,7 +177,7 @@ module RubyNestNats
         indentation = indent.is_a?(String) ? indent : (" " * indent)
 
         text_lines.each do |line|
-          logger.send(level, "[#{timestamp}] RubyNestNats | #{indentation}#{line}")
+          logger.send(level, "[#{timestamp}] Natsy | #{indentation}#{line}")
         end
       end
 

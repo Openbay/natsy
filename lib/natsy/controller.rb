@@ -2,11 +2,11 @@
 
 require_relative "./utils"
 
-module RubyNestNats
-  # Create controller classes which inherit from +RubyNestNats::Controller+ in
+module Natsy
+  # Create controller classes which inherit from +Natsy::Controller+ in
   # order to give your message listeners some structure.
   class Controller
-    NO_QUEUE_GIVEN = :ruby_nest_nats_super_special_no_op_queue_symbol_qwertyuiop1234567890
+    NO_QUEUE_GIVEN = :natsy_super_special_no_op_queue_symbol_qwertyuiop1234567890
     private_constant :NO_QUEUE_GIVEN
 
     class << self
@@ -25,7 +25,7 @@ module RubyNestNats
       #   end
       #
       # If omitted, the controller will fall back on the global default queue
-      # assigned with +RubyNestNats::Client::default_queue=+. If no default
+      # assigned with +Natsy::Client::default_queue=+. If no default
       # queue is set in either the controller or globally, then the default
       # queue will be blank. Set the default queue to +nil+ in a controller to
       # override the global default queue and explicitly make the default queue
@@ -34,7 +34,7 @@ module RubyNestNats
       def default_queue(some_queue = NO_QUEUE_GIVEN)
         # +NO_QUEUE_GIVEN+ is a special symbol (rather than +nil+) so that the
         # default queue can be "unset" to +nil+ (given a non-+nil+ global
-        # default set with +RubyNestNats::Client::default_queue=+).
+        # default set with +Natsy::Client::default_queue=+).
         if some_queue == NO_QUEUE_GIVEN
           @default_queue || Client.default_queue
         else
@@ -101,7 +101,7 @@ module RubyNestNats
       # You can register a response for the built-up subject/pattern string
       # using the +::response+ macro. Pass a block to +::response+ which
       # optionally takes two arguments (the same arguments supplied to the block
-      # of +RubyNestNats::Client::reply_to+). The result of that block will be
+      # of +Natsy::Client::reply_to+). The result of that block will be
       # sent as a response to the message received.
       #
       # @example

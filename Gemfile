@@ -2,5 +2,5 @@
 
 source "https://rubygems.org"
 
-# Specify your gem's dependencies in ruby_nest_nats.gemspec
+# Specify your gem's dependencies in natsy.gemspec
 gemspec

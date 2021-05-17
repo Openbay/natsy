@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module RubyNestNats
+module Natsy
   # Some internal utility methods
   class Utils
     class << self

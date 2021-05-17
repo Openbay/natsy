@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "pry"
-require "ruby_nest_nats"
+require "natsy"
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure

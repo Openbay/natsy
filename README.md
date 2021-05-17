@@ -1,6 +1,6 @@
-# RubyNestNats
+# Natsy
 
-The `ruby_nest_nats` gem allows you to listen for (and reply to) NATS messages asynchronously in a Ruby application.
+The `natsy` gem allows you to listen for (and reply to) NATS messages asynchronously in a Ruby application.
 
 ## TODO
 
@@ -21,7 +21,7 @@ The `ruby_nest_nats` gem allows you to listen for (and reply to) NATS messages a
 Add the gem to your application's `Gemfile`:
 
 ```ruby
-gem 'ruby_nest_nats'
+gem 'natsy'
 ```
 
 ...and then run:
@@ -35,7 +35,7 @@ bundle install
 Alternatively, install it globally:
 
 ```bash
-gem install ruby_nest_nats
+gem install natsy
 ```
 
 ### NATS server (important!)
@@ -60,22 +60,22 @@ docker run -p 4222:4222 -p 8222:8222 -p 6222:6222 -ti nats:latest
 
 #### Attaching a logger
 
-Attach a logger to have `ruby_nest_nats` write out logs for messages received, responses sent, errors raised, lifecycle events, etc.
+Attach a logger to have `natsy` write out logs for messages received, responses sent, errors raised, lifecycle events, etc.
 
 ```ruby
-require 'ruby_nest_nats'
+require 'natsy'
 require 'logger'
 
 nats_logger = Logger.new(STDOUT)
 nats_logger.level = Logger::INFO
 
-RubyNestNats::Client.logger = nats_logger
+Natsy::Client.logger = nats_logger
 ```
 
 In a Rails application, you might do this instead:
 
 ```ruby
-RubyNestNats::Client.logger = Rails.logger
+Natsy::Client.logger = Rails.logger
 ```
 
 #### Log levels
@@ -94,29 +94,29 @@ The following will be logged at the specified log levels
 Set a default queue for subscriptions.
 
 ```ruby
-RubyNestNats::Client.default_queue = "foobar"
+Natsy::Client.default_queue = "foobar"
 ```
 
 Leave the `::default_queue` blank (or assign `nil`) to use no default queue.
 
 ```ruby
-RubyNestNats::Client.default_queue = nil
+Natsy::Client.default_queue = nil
 ```
 
 <a id="reply-to-section"></a>
 
 ### Registering message handlers
 
-Register a message handler with the `RubyNestNats::Client::reply_to` method. Pass a subject string as the first argument (either a static subject string or a pattern to match more than one subject). Specify a queue (or don't) with the `queue:` option. If you don't provide the `queue:` option, it will be set to the value of `default_queue`, or to `nil` (no queue) if a default queue hasn't been set.
+Register a message handler with the `Natsy::Client::reply_to` method. Pass a subject string as the first argument (either a static subject string or a pattern to match more than one subject). Specify a queue (or don't) with the `queue:` option. If you don't provide the `queue:` option, it will be set to the value of `default_queue`, or to `nil` (no queue) if a default queue hasn't been set.
 
 The result of the given block will be published in reply to the message. The block is passed two arguments when a message matching the subject is received: `data` and `subject`. The `data` argument is the payload of the message (JSON objects/arrays will be parsed into string-keyed `Hash` objects/`Array` objects, respectively). The `subject` argument is the subject of the message received (mostly only useful if a _pattern_ was specified instead of a static subject string).
 
 ```ruby
-RubyNestNats::Client.reply_to("some.subject", queue: "foobar") { |data| "Got it! #{data.inspect}" }
+Natsy::Client.reply_to("some.subject", queue: "foobar") { |data| "Got it! #{data.inspect}" }
 
-RubyNestNats::Client.reply_to("some.*.pattern") { |data, subject| "Got #{data} on #{subject}" }
+Natsy::Client.reply_to("some.*.pattern") { |data, subject| "Got #{data} on #{subject}" }
 
-RubyNestNats::Client.reply_to("other.subject") do |data|
+Natsy::Client.reply_to("other.subject") do |data|
   if data["foo"] == "bar"
     { is_bar: "Yep!" }
   else
@@ -124,62 +124,62 @@ RubyNestNats::Client.reply_to("other.subject") do |data|
   end
 end
 
-RubyNestNats::Client.reply_to("subject.in.queue", queue: "barbaz") do
+Natsy::Client.reply_to("subject.in.queue", queue: "barbaz") do
   "My turn!"
 end
 ```
 
 ### Starting the listeners
 
-Start listening for messages with the `RubyNestNats::Client::start!` method. This will spin up a non-blocking thread that subscribes to subjects (as specified by invocation(s) of `::reply_to`) and waits for messages to come in. When a message is received, the appropriate `::reply_to` block will be used to compute a response, and that response will be published.
+Start listening for messages with the `Natsy::Client::start!` method. This will spin up a non-blocking thread that subscribes to subjects (as specified by invocation(s) of `::reply_to`) and waits for messages to come in. When a message is received, the appropriate `::reply_to` block will be used to compute a response, and that response will be published.
 
 ```ruby
-RubyNestNats::Client.start!
+Natsy::Client.start!
 ```
 
-> **NOTE:** If an error is raised in one of the handlers, `RubyNestNats::Client` will restart automatically.
+> **NOTE:** If an error is raised in one of the handlers, `Natsy::Client` will restart automatically.
 
-> **NOTE:** You _can_ invoke `::reply_to` to create additional message subscriptions after `RubyNestNats::Client.start!`, but be aware that this forces the client to restart. You may see (benign, already-handled) errors in the logs generated when this restart happens. It will force the client to restart and re-subscribe after _each additional `::reply_to` invoked after `::start!`._ So, if you have a lot of additional `::reply_to` invocations, you may want to consider refactoring so that your call to `RubyNestNats::Client.start!` occurs _after_ those additions.
+> **NOTE:** You _can_ invoke `::reply_to` to create additional message subscriptions after `Natsy::Client.start!`, but be aware that this forces the client to restart. You may see (benign, already-handled) errors in the logs generated when this restart happens. It will force the client to restart and re-subscribe after _each additional `::reply_to` invoked after `::start!`._ So, if you have a lot of additional `::reply_to` invocations, you may want to consider refactoring so that your call to `Natsy::Client.start!` occurs _after_ those additions.
 
 > **NOTE:** The `::start!` method can be safely called multiple times; only the first will be honored, and any subsequent calls to `::start!` after the client is already started will do nothing (except write a _"NATS is already running"_ log to the logger at the `DEBUG` level).
 
 ### Basic full working example (in vanilla Ruby)
 
-The following should be enough to start a `ruby_nest_nats` setup in your Ruby application, using what we've learned so far.
+The following should be enough to start a `natsy` setup in your Ruby application, using what we've learned so far.
 
 > **NOTE:** For a more organized structure and implementation in a larger app (like a Rails project), see the ["controller" section below](#controller-section).
 
 ```ruby
-require 'ruby_nest_nats'
+require 'natsy'
 require 'logger'
 
 nats_logger = Logger.new(STDOUT)
 nats_logger.level = Logger::DEBUG
 
-RubyNestNats::Client.logger = nats_logger
-RubyNestNats::Client.default_queue = "foobar"
+Natsy::Client.logger = nats_logger
+Natsy::Client.default_queue = "foobar"
 
-RubyNestNats::Client.reply_to("some.subject") { |data| "Got it! #{data.inspect}" }
-RubyNestNats::Client.reply_to("some.*.pattern") { |data, subject| "Got #{data} on #{subject}" }
-RubyNestNats::Client.reply_to("subject.in.queue", queue: "barbaz") { { msg: "My turn!", turn: 5 } }
+Natsy::Client.reply_to("some.subject") { |data| "Got it! #{data.inspect}" }
+Natsy::Client.reply_to("some.*.pattern") { |data, subject| "Got #{data} on #{subject}" }
+Natsy::Client.reply_to("subject.in.queue", queue: "barbaz") { { msg: "My turn!", turn: 5 } }
 
-RubyNestNats::Client.start!
+Natsy::Client.start!
 ```
 
 <a id="controller-section"></a>
 
 ### Creating "controller"-style classes for listener organization
 
-Create controller classes which inherit from `RubyNestNats::Controller` in order to give your message listeners some structure.
+Create controller classes which inherit from `Natsy::Controller` in order to give your message listeners some structure.
 
-Use the `::default_queue` macro to set a default queue string. If omitted, the controller will fall back on the global default queue assigned with `RubyNestNats::Client::default_queue=` (as described [here](#default-queue-section)). If no default queue is set in either the controller or globally, then the default queue will be blank. Set the default queue to `nil` in a controller to override the global default queue and explicitly make the default queue blank for that controller.
+Use the `::default_queue` macro to set a default queue string. If omitted, the controller will fall back on the global default queue assigned with `Natsy::Client::default_queue=` (as described [here](#default-queue-section)). If no default queue is set in either the controller or globally, then the default queue will be blank. Set the default queue to `nil` in a controller to override the global default queue and explicitly make the default queue blank for that controller.
 
 Use the `::subject` macro to create a block for listening to that subject segment. Nested calls to `::subject` will append each subsequent subject/pattern string to the last (joined by a periods). There is no limit to the level of nesting.
 
-You can register a response for the built-up subject/pattern string using the `::response` macro. Pass a block to `::response` which optionally takes two arguments ([the same arguments supplied to the block of `RubyNestNats::Client::reply_to`](#reply-to-section)). The result of that block will be sent as a response to the message received.
+You can register a response for the built-up subject/pattern string using the `::response` macro. Pass a block to `::response` which optionally takes two arguments ([the same arguments supplied to the block of `Natsy::Client::reply_to`](#reply-to-section)). The result of that block will be sent as a response to the message received.
 
 ```ruby
-class HelloController < RubyNestNats::Controller
+class HelloController < Natsy::Controller
   default_queue "foobar"
 
   subject "hello" do
@@ -224,13 +224,13 @@ class HelloController < RubyNestNats::Controller
 end
 ```
 
-> **NOTE:** If you implement controllers like this and you are using code-autoloading machinery (like Zeitwerk in Rails), you will need to make sure these paths are eager-loaded when your app starts. **If you don't, `ruby_nest_nats` will not register the listeners,** and will not respond to messages for the specified subjects.
+> **NOTE:** If you implement controllers like this and you are using code-autoloading machinery (like Zeitwerk in Rails), you will need to make sure these paths are eager-loaded when your app starts. **If you don't, `natsy` will not register the listeners,** and will not respond to messages for the specified subjects.
 >
 > For example: in a Rails project (assuming you have your NATS controllers in a directory called `app/nats/`), you may want to put something like the following in an initializer (such as `config/initializers/nats.rb`):
 >
 > ```ruby
-> RubyNestNats::Client.logger = Rails.logger
-> RubyNestNats::Client.default_queue = "foobar"
+> Natsy::Client.logger = Rails.logger
+> Natsy::Client.default_queue = "foobar"
 >
 > # ...
 >
@@ -238,7 +238,7 @@ end
 >   nats_controller_paths = Dir[Rails.root.join("app", "nats", "**", "*_controller.rb")]
 >   nats_controller_paths.each { |file_path| require_dependency(file_path) }
 >
->   RubyNestNats::Client.start!
+>   Natsy::Client.start!
 > end
 > ```
 
@@ -287,7 +287,7 @@ bundle exec rubocop
 
 ### Create a release
 
-Bump the `RubyNestNats::VERSION` value in `lib/ruby_nest_nats/version.rb`, commit, and then run:
+Bump the `Natsy::VERSION` value in `lib/natsy/version.rb`, commit, and then run:
 
 ```bash
 bundle exec rake release
@@ -304,7 +304,7 @@ This will:
 1. create a git tag for the new version,
 1. push the commits,
 1. build the gem, and
-1. push it to [rubygems.org](https://rubygems.org/gems/ruby_nest_nats).
+1. push it to [rubygems.org](https://rubygems.org/gems/natsy).
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
 
@@ -312,7 +312,7 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/Openbay/ruby_nest_nats.
+Bug reports and pull requests are welcome on GitHub at https://github.com/Openbay/natsy.
 
 ## License
 

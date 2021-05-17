@@ -1,20 +1,20 @@
 # frozen_string_literal: true
 
-require_relative "lib/ruby_nest_nats/version"
+require_relative "lib/natsy/version"
 
 Gem::Specification.new do |spec|
-  spec.name = "ruby_nest_nats"
-  spec.version = RubyNestNats::VERSION
+  spec.name = "natsy"
+  spec.version = Natsy::VERSION
   spec.authors = ["Keegan Leitz"]
   spec.email = ["keegan@openbay.com"]
 
   spec.summary = "Bridge between NestJS NATS and Ruby NATS"
   spec.description = "Write Ruby NATS handlers for NestJS NATS implementations"
-  spec.homepage = "https://github.com/openbay/ruby_nest_nats"
+  spec.homepage = "https://github.com/openbay/natsy"
   spec.license = "MIT"
   spec.required_ruby_version = Gem::Requirement.new(">= 2.6")
 
-  rubydoc_url = "https://www.rubydoc.info/gems/ruby_nest_nats/#{RubyNestNats::VERSION}"
+  rubydoc_url = "https://www.rubydoc.info/gems/natsy/#{Natsy::VERSION}"
   spec.metadata["documentation_uri"] = rubydoc_url
 
   # Specify which files should be added to the gem when it is released.
