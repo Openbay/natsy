@@ -8,8 +8,8 @@ Gem::Specification.new do |spec|
   spec.authors = ["Keegan Leitz"]
   spec.email = ["keegan@openbay.com"]
 
-  spec.summary = "Bridge between NestJS NATS and Ruby NATS"
-  spec.description = "Write Ruby NATS handlers for NestJS NATS implementations"
+  spec.summary = "Listen for (and reply to) NATS messages asynchronously in a Ruby application"
+  spec.description = "Listen for (and reply to) NATS messages asynchronously in a Ruby application"
   spec.homepage = "https://github.com/openbay/natsy"
   spec.license = "MIT"
   spec.required_ruby_version = Gem::Requirement.new(">= 2.6")
