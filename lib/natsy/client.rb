@@ -10,50 +10,6 @@ module Natsy
   # most functionality if desired.
   class Client
     class << self
-      # Optional logger for lifecycle events, messages received, etc.
-      attr_reader :logger
-
-      # Optional default queue for message subscription and replies.
-      attr_reader :default_queue
-
-      # Attach a logger to have +natsy+ write out logs for messages
-      # received, responses sent, errors raised, lifecycle events, etc.
-      #
-      # @example
-      #   require 'natsy'
-      #   require 'logger'
-      #
-      #   nats_logger = Logger.new(STDOUT)
-      #   nats_logger.level = Logger::INFO
-      #
-      #   Natsy::Client.logger = nats_logger
-      #
-      # In a Rails application, you might do this instead:
-      #
-      # @example
-      #   Natsy::Client.logger = Rails.logger
-      #
-      def logger=(some_logger)
-        @logger = some_logger
-        log("Set the logger to #{@logger.inspect}")
-      end
-
-      # Set a default queue for subscriptions.
-      #
-      # @example
-      #   Natsy::Client.default_queue = "foobar"
-      #
-      # Leave the +::default_queue+ blank (or assign +nil+) to use no default
-      # queue.
-      #
-      # @example
-      #   Natsy::Client.default_queue = nil
-      #
-      def default_queue=(some_queue)
-        @default_queue = Utils.presence(some_queue.to_s)
-        log("Setting the default queue to #{@default_queue || '(none)'}", level: :debug)
-      end
-
       # Returns +true+ if +::start!+ has already been called (meaning the client
       # is listening to NATS messages). Returns +false+ if it has not yet been
       # called, or if it has been stopped.
@@ -72,8 +28,9 @@ module Natsy
       # method. Pass a subject string as the first argument (either a static
       # subject string or a pattern to match more than one subject). Specify a
       # queue (or don't) with the +queue:+ option. If you don't provide the
-      # +queue:+ option, it will be set to the value of +default_queue+, or to
-      # +nil+ (no queue) if a default queue hasn't been set.
+      # +queue:+ option, it will be set to the value of
+      # +Natsy::Config::default_queue+, or to +nil+ (no queue) if a default
+      # queue hasn't been set.
       #
       # The result of the given block will be published in reply to the message.
       # The block is passed two arguments when a message matching the subject is
@@ -101,7 +58,7 @@ module Natsy
       #   end
       #
       def reply_to(subject, queue: nil, &block)
-        queue = Utils.presence(queue) || default_queue
+        queue = Utils.presence(queue) || Config.default_queue
         queue_desc = " in queue '#{queue}'" if queue
         log("Registering a reply handler for subject '#{subject}'#{queue_desc}", level: :debug)
         register_reply!(subject: subject.to_s, handler: block, queue: queue.to_s)
@@ -180,17 +137,7 @@ module Natsy
       end
 
       def log(text, level: :info, indent: 0)
-        return unless logger
-
-        timestamp = Time.now.to_s
-        text_lines = text.split("\n")
-        indentation = indent.is_a?(String) ? indent : (" " * indent)
-
-        text_lines.each do |line|
-          logger.send(level, "[#{timestamp}] Natsy | #{indentation}#{line}")
-        end
-
-        nil
+        Utils.log(Config.logger, text, level: level, indent: indent)
       end
 
       def kill!
@@ -241,7 +188,7 @@ module Natsy
         reply = {
           subject: subject,
           handler: handler,
-          queue: Utils.presence(queue) || default_queue,
+          queue: Utils.presence(queue) || Config.default_queue,
         }
 
         replies << reply
@@ -250,7 +197,7 @@ module Natsy
       end
 
       def listen
-        NATS.start do
+        NATS.start(servers: Natsy::Config.urls) do
           replies.each do |replier|
             queue_desc = " in queue '#{replier[:queue]}'" if replier[:queue]
             log("Subscribing to subject '#{replier[:subject]}'#{queue_desc}", level: :debug)

@@ -58,6 +58,57 @@ docker run -p 4222:4222 -p 8222:8222 -p 6222:6222 -ti nats:latest
 
 > **NOTE:** For other methods of running a NATS server, see [the NATS documentation](https://docs.nats.io/nats-server/installation).
 
+### Configuration
+
+Use `Natsy::Config::set` to set configuration options. These options can either be set via a `Hash`/keyword arguments passed to the `::set` method, or set by invoking the method with a block and assigning your options to the yielded `Natsy::Config::Options` instance.
+
+This README will use the following two syntaxes interchangably; remember that they do **exactly the same thing:**
+
+```ruby
+Natsy::Config.set(
+  urls: ["nats://foo.bar:4567", "nats://foo.bar:5678"],
+  default_queue: "foobar",
+  logger: Rails.logger,
+)
+```
+
+```ruby
+Natsy::Config.set do |options|
+  options.urls = ["nats://foo.bar:4567", "nats://foo.bar:5678"]
+  options.default_queue = "foobar"
+  options.logger = Rails.logger
+end
+```
+
+The following options are available:
+
+- `url`: A single URL string (including protocol, domain, and port) which points to the relevant NATS server (see [here](#setting-nats-server-url-section) for more info)
+- `urls`: An array of URL strings in case you need to listen to multiple NATS servers (see [here](#setting-nats-server-url-section) for more info)
+- `logger`: A logger where `natsy` can write helpful information (see [here](#logging-section) for more info)
+- `default_queue`: The default queue that your application should fall back to if none is given in a more specific context (see [here](#default-queue-section) for more info)
+
+<a id="setting-nats-server-url-section"></a>
+
+### Setting the NATS server URL(s)
+
+Set the URL/URLs at which your NATS server mediates messages.
+
+```ruby
+Natsy::Config.set do |options|
+  options.url = "nats://foo.bar:4567"
+end
+```
+
+```ruby
+Natsy::Config.set do |options|
+  options.urls = ["nats://foo.bar:4567", "nats://foo.bar:5678"]
+end
+```
+
+> **NOTE:** If no `url`/`urls` option is specified, `natsy` will fall back on the default NATS server URL, which is `nats://localhost:4222`.
+
+<a id="logging-section"></a>
+
 ### Logging
 
 #### Attaching a logger
@@ -68,23 +119,24 @@ Attach a logger to have `natsy` write out logs for messages received, responses 
 require 'natsy'
 require 'logger'
 
-nats_logger = Logger.new(STDOUT)
-nats_logger.level = Logger::INFO
-
-Natsy::Client.logger = nats_logger
+Natsy::Config.set do |options|
+  nats_logger = Logger.new(STDOUT)
+  nats_logger.level = Logger::INFO
+  options.logger = nats_logger
+end
 ```
 
 In a Rails application, you might do this instead:
 
 ```ruby
-Natsy::Client.logger = Rails.logger
+Natsy::Config.set(logger: Rails.logger)
 ```
 
 #### Log levels
 
 The following will be logged at the specified log levels
 
-- `DEBUG`: Lifecycle events (starting NATS listeners, stopping NATS, reply registration, setting the default queue, etc.), as well as everything under `INFO`, `WARN`, and `ERROR`
+- `DEBUG`: Lifecycle events (starting NATS listeners, stopping NATS, reply registration, etc.), as well as everything under `INFO`, `WARN`, and `ERROR`
 - `INFO`: Message activity over NATS (received a message, replied with a message, etc.), as well as everything under `WARN` and `ERROR`
 - `WARN`: Error handled gracefully (listening restarted due to some exception, etc.), as well as everything under `ERROR`
 - `ERROR`: Some exception was raised in-thread (error in handler, error in subscription, etc.)
@@ -96,13 +148,13 @@ The following will be logged at the specified log levels
 Set a default queue for subscriptions.
 
 ```ruby
-Natsy::Client.default_queue = "foobar"
+Natsy::Config.set(default_queue: "foobar")
 ```
 
-Leave the `::default_queue` blank (or assign `nil`) to use no default queue.
+Leave the `default_queue` blank (or assign `nil`) to use no default queue.
 
 ```ruby
-Natsy::Client.default_queue = nil
+Natsy::Config.set(default_queue: nil)
 ```
 
 <a id="reply-to-section"></a>
@@ -155,15 +207,29 @@ The following should be enough to start a `natsy` setup in your Ruby application
 require 'natsy'
 require 'logger'
 
-nats_logger = Logger.new(STDOUT)
-nats_logger.level = Logger::DEBUG
+Natsy::Config.set do |options|
+  nats_logger = Logger.new(STDOUT)
+  nats_logger.level = Logger::DEBUG
 
-Natsy::Client.logger = nats_logger
-Natsy::Client.default_queue = "foobar"
+  options.logger = nats_logger
+  options.urls = ["nats://foo.bar:4567", "nats://foo.bar:5678"]
+  options.default_queue = "foobar"
+end
 
-Natsy::Client.reply_to("some.subject") { |data| "Got it! #{data.inspect}" }
-Natsy::Client.reply_to("some.*.pattern") { |data, subject| "Got #{data} on #{subject}" }
-Natsy::Client.reply_to("subject.in.queue", queue: "barbaz") { { msg: "My turn!", turn: 5 } }
+Natsy::Client.reply_to("some.subject") do |data|
+  "Got it! #{data.inspect}"
+end
+
+Natsy::Client.reply_to("some.*.pattern") do |data, subject|
+  "Got #{data} on #{subject}"
+end
+
+Natsy::Client.reply_to("subject.in.queue", queue: "barbaz") do
+  {
+    msg: "My turn!",
+    turn: 5,
+  }
+end
 
 Natsy::Client.start!
 ```
@@ -174,7 +240,7 @@ Natsy::Client.start!
 
 Create controller classes which inherit from `Natsy::Controller` in order to give your message listeners some structure.
 
-Use the `::default_queue` macro to set a default queue string. If omitted, the controller will fall back on the global default queue assigned with `Natsy::Client::default_queue=` (as described [here](#default-queue-section)). If no default queue is set in either the controller or globally, then the default queue will be blank. Set the default queue to `nil` in a controller to override the global default queue and explicitly make the default queue blank for that controller.
+Use the `::default_queue` macro to set a default queue string. If omitted, the controller will fall back on the global default queue assigned to `Natsy::Config::default_queue` (as described [here](#default-queue-section)). If no default queue is set in either the controller or globally, then the default queue will be blank. Set the default queue to `nil` in a controller to override the global default queue and explicitly make the default queue blank for that controller.
 
 Use the `::subject` macro to create a block for listening to that subject segment. Nested calls to `::subject` will append each subsequent subject/pattern string to the last (joined by a periods). There is no limit to the level of nesting.
 
@@ -231,8 +297,7 @@ end
 > For example: in a Rails project (assuming you have your NATS controllers in a directory called `app/nats/`), you may want to put something like the following in an initializer (such as `config/initializers/nats.rb`):
 >
 > ```ruby
-> Natsy::Client.logger = Rails.logger
-> Natsy::Client.default_queue = "foobar"
+> Natsy::Config.set(logger: Rails.logger, default_queue: "foobar")
 >
 > # ...
 >

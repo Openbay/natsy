@@ -25,18 +25,18 @@ module Natsy
       #   end
       #
       # If omitted, the controller will fall back on the global default queue
-      # assigned with +Natsy::Client::default_queue=+. If no default
-      # queue is set in either the controller or globally, then the default
-      # queue will be blank. Set the default queue to +nil+ in a controller to
-      # override the global default queue and explicitly make the default queue
-      # blank for that controller.
+      # assigned with +Natsy::Config::set+. If no default queue is set in either
+      # the controller or globally, then the default queue will be blank. Set
+      # the default queue to +nil+ in a controller to override the global
+      # default queue and explicitly make the default queue blank for that
+      # controller.
       #
       def default_queue(some_queue = NO_QUEUE_GIVEN)
         # +NO_QUEUE_GIVEN+ is a special symbol (rather than +nil+) so that the
         # default queue can be "unset" to +nil+ (given a non-+nil+ global
-        # default set with +Natsy::Client::default_queue=+).
+        # default set with +Natsy::Client::set+).
         if some_queue == NO_QUEUE_GIVEN
-          @default_queue || Client.default_queue
+          @default_queue || Config.default_queue
         else
           @default_queue = Utils.presence(some_queue.to_s)
         end
