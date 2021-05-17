@@ -44,6 +44,8 @@ This gem also requires a NATS server to be installed and running before use. See
 
 ## Usage
 
+<a id="starting-the-nats-server-section">
+
 ### Starting the NATS server
 
 You'll need to start a NATS server before running your Ruby application. If you installed it via Docker, you might start it like so:
@@ -267,7 +269,7 @@ bin/console
 
 ### Run the tests
 
-To run the RSpec test suites, run:
+To run the RSpec test suites, first [start the NATS server](#starting-the-nats-server-section). Then, run the tests:
 
 ```bash
 bundle exec rake spec

@@ -255,7 +255,7 @@ module Natsy
             queue_desc = " in queue '#{replier[:queue]}'" if replier[:queue]
             log("Subscribing to subject '#{replier[:subject]}'#{queue_desc}", level: :debug)
 
-            NATS.subscribe(replier[:subject], queue: replier[:queue]) do |message, inbox, subject|
+            NATS.subscribe(replier[:subject], queue: replier[:queue]) do |message, reply_subject, subject|
               parsed_message = JSON.parse(message)
 
               id, data, pattern = if parsed_message.is_a?(Hash)
@@ -270,7 +270,7 @@ module Natsy
                 pattern: #{pattern || '(none)'}
                 subject: #{subject || '(none)'}
                 data:    #{data.to_json}
-                inbox:   #{inbox || '(none)'}
+                inbox:   #{reply_subject || '(none)'}
                 queue:   #{replier[:queue] || '(none)'}
               LOG_MESSAGE
               log(message_desc, indent: 2)
@@ -280,7 +280,7 @@ module Natsy
               log("Responding with '#{raw_response}'")
 
               response = raw_response.is_a?(String) ? raw_response : raw_response.to_json
-              NATS.publish(inbox, response) if Utils.present?(inbox)
+              NATS.publish(reply_subject, response) if Utils.present?(reply_subject)
             end
           end
         end
