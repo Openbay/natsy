@@ -2,6 +2,7 @@
 
 require "logger"
 require "nats/client"
+require "timeout"
 
 RSpec.describe Natsy::Client do
   describe "::logger=" do
@@ -109,7 +110,7 @@ RSpec.describe Natsy::Client do
   end
 
   describe "::start!" do
-    before do
+    after do
       described_class.send(:stop!)
       described_class.send(:kill!)
       described_class.logger = nil
@@ -123,38 +124,35 @@ RSpec.describe Natsy::Client do
     end
 
     it "starts listening for subscribed messages" do
-      dumb = nil
-      logger = Logger.new(STDOUT)
+      output = StringIO.new
+      logger = Logger.new(output)
       logger.level = Logger::DEBUG
+
       described_class.logger = logger
       described_class.default_queue = "whatever"
-      described_class.reply_to("some_subject") { described_class.send(:log, "I GOT IT!"); dumb = "foo" }
+
+      described_class.reply_to("some_subject") do
+        described_class.send(:log, "I GOT IT!")
+        "Here it is!"
+      end
+
       described_class.start!
-      sleep 0.5
-      received = nil
-      puts "HEY RIGHT BEFORE"
-      # binding.pry
-      NATS.start do
-        # described_class.send(:log, "HEY RIGHT BEFORE AGAIN")
-        # NATS.request("some_subject", 123) do |msg|
-        #   received = msg
-        #   described_class.send(:log, "HEY RIGHT HERE")
-        #   # NATS.stop
-        # end
-        NATS.subscribe("some_subject", queue: "whatever") do |msg|
-          received = msg
-          described_class.send(:log, "HEY RIGHT HERE AGAIN")
-          # NATS.stop
-        end
-        NATS.publish("some_subject", 123, queue: "whatever") do |msg|
-          received = msg
-          described_class.send(:log, "HEY RIGHT HERE")
-          # NATS.stop
+
+      sleep 2 # TODO: figure out how to do this without sleeps
+
+      Timeout.timeout(5) do
+        NATS.start do
+          NATS.request("some_subject", 123, queue: "whatever") do |msg|
+            described_class.send(:log, "The reply was '#{msg}'")
+            NATS.drain
+          end
         end
       end
-      sleep 0.5
-      expect(dumb).to eq("foo")
-      expect(received).to eq("foo")
+
+      sleep 2 # TODO: figure out how to do this without sleeps
+
+      expect(output.string).to include("I GOT IT!")
+      expect(output.string).to include("The reply was 'Here it is!'")
     end
   end
 end

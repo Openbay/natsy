@@ -145,29 +145,39 @@ module Natsy
 
         started!
 
-        self.current_thread = Thread.new do
+        thread = Thread.new do
           Thread.handle_interrupt(StandardError => :never) do
             Thread.handle_interrupt(StandardError => :immediate) { listen }
           rescue NATS::ConnectError => e
             log("Could not connect to NATS server:", level: :error)
             log(e.full_message, level: :error, indent: 2)
             Thread.current.exit
-          rescue NewSubscriptionsError => e
+          rescue NewSubscriptionsError => _e
             log("New subscriptions! Restarting...", level: :info)
             restart!
-            raise e # TODO: there has to be a better way
+            Thread.current.exit
+            # raise e # TODO: there has to be a better way
           rescue StandardError => e
             log("Encountered an error:", level: :error)
             log(e.full_message, level: :error, indent: 2)
             restart!
-            raise e
+            Thread.current.exit
+            # raise e
           end
         end
+
+        threads << thread
       end
 
       private
 
-      attr_accessor :current_thread
+      def threads
+        @threads ||= []
+      end
+
+      def current_thread
+        threads.last
+      end
 
       def log(text, level: :info, indent: 0)
         return unless logger
@@ -179,10 +189,12 @@ module Natsy
         text_lines.each do |line|
           logger.send(level, "[#{timestamp}] Natsy | #{indentation}#{line}")
         end
+
+        nil
       end
 
       def kill!
-        current_thread.kill if current_thread && current_thread.alive?
+        threads.each { |thread| thread.kill if thread.alive? }
       end
 
       def stop!
@@ -200,6 +212,7 @@ module Natsy
       def restart!
         log("Restarting NATS", level: :warn)
         stop!
+        kill!
         start!
       end
 
@@ -244,7 +257,12 @@ module Natsy
 
             NATS.subscribe(replier[:subject], queue: replier[:queue]) do |message, inbox, subject|
               parsed_message = JSON.parse(message)
-              id, data, pattern = parsed_message.values_at("id", "data", "pattern")
+
+              id, data, pattern = if parsed_message.is_a?(Hash)
+                parsed_message.values_at("id", "data", "pattern")
+              else
+                [nil, parsed_message, nil]
+              end
 
               log("Received a message!")
               message_desc = <<~LOG_MESSAGE
@@ -253,14 +271,16 @@ module Natsy
                 subject: #{subject || '(none)'}
                 data:    #{data.to_json}
                 inbox:   #{inbox || '(none)'}
+                queue:   #{replier[:queue] || '(none)'}
               LOG_MESSAGE
               log(message_desc, indent: 2)
 
-              response_data = replier[:handler].call(data)
+              raw_response = replier[:handler].call(data)
 
-              log("Responding with '#{response_data}'")
+              log("Responding with '#{raw_response}'")
 
-              NATS.publish(inbox, response_data.to_json, queue: replier[:queue])
+              response = raw_response.is_a?(String) ? raw_response : raw_response.to_json
+              NATS.publish(inbox, response) if Utils.present?(inbox)
             end
           end
         end

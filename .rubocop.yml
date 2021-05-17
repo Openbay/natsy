@@ -33,6 +33,13 @@ Metrics/AbcSize:
     - '*.gemspec'
 
 Metrics/BlockLength:
+  Max: 50
+  Exclude:
+    - 'spec/**/*_spec.rb'
+    - '*.gemspec'
+
+Metrics/CyclomaticComplexity:
+  Max: 15
   Exclude:
     - 'spec/**/*_spec.rb'
     - '*.gemspec'
@@ -63,6 +70,12 @@ Metrics/ModuleLength:
     - array
     - hash
     - heredoc
+  Exclude:
+    - 'spec/**/*_spec.rb'
+    - '*.gemspec'
+
+Metrics/PerceivedComplexity:
+  Max: 15
   Exclude:
     - 'spec/**/*_spec.rb'
     - '*.gemspec'
