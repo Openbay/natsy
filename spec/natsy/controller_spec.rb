@@ -242,7 +242,7 @@ RSpec.describe Natsy::Controller do
 
       sleep 2 # TODO: figure out how to do this without sleeps
 
-      expect(output.string).to include("The reply was 'idk Bob, irdk.'")
+      expect(output.string).to include("The reply was '\"idk Bob, irdk.\"'")
     end
 
     it "receives the fully-resolved subject (not the pattern) as the second argument to its block" do
@@ -267,7 +267,7 @@ RSpec.describe Natsy::Controller do
       sleep 2 # TODO: figure out how to do this without sleeps
 
       expected_response = "Sorry, Fred, you must have me confused with someone else; I'm not Bob!"
-      expect(output.string).to include("The reply was '#{expected_response}'")
+      expect(output.string).to include("The reply was '#{expected_response.inspect}'")
     end
   end
 end

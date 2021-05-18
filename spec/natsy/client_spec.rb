@@ -104,7 +104,7 @@ RSpec.describe Natsy::Client do
       sleep 2 # TODO: figure out how to do this without sleeps
 
       expect(output.string).to include("I GOT IT!")
-      expect(output.string).to include("The reply was 'Here it is!'")
+      expect(output.string).to include("The reply was '\"Here it is!\"'")
     end
   end
 end
