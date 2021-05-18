@@ -27,9 +27,8 @@ module Natsy
       # If omitted, the controller will fall back on the global default queue
       # assigned with +Natsy::Config::set+. If no default queue is set in either
       # the controller or globally, then the default queue will be blank. Set
-      # the default queue to +nil+ in a controller to override the global
-      # default queue and explicitly make the default queue blank for that
-      # controller.
+      # the default queue to +nil+ in a controller to fall back to the global
+      # default queue.
       #
       def default_queue(some_queue = NO_QUEUE_GIVEN)
         # +NO_QUEUE_GIVEN+ is a special symbol (rather than +nil+) so that the

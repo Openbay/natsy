@@ -26,7 +26,7 @@ Layout/FirstArrayElementIndentation:
 # Metrics
 
 Metrics/AbcSize:
-  Max: 30
+  Max: 35
   CountRepeatedAttributes: false
   Exclude:
     - 'spec/**/*_spec.rb'
@@ -62,6 +62,9 @@ Metrics/MethodLength:
     - array
     - hash
     - heredoc
+  Exclude:
+    - 'spec/**/*_spec.rb'
+    - '*.gemspec'
 
 Metrics/ModuleLength:
   Max: 150
@@ -75,7 +78,7 @@ Metrics/ModuleLength:
     - '*.gemspec'
 
 Metrics/PerceivedComplexity:
-  Max: 15
+  Max: 20
   Exclude:
     - 'spec/**/*_spec.rb'
     - '*.gemspec'

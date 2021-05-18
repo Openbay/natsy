@@ -8,7 +8,7 @@ RSpec.describe Natsy::Client do
   describe "::reply_to=" do
     before do
       Natsy::Config.reset!
-      described_class.instance_variable_set(:@replies, [])
+      described_class.reset!
     end
 
     it "adds a valid replier hash to the list of subscribed replies" do

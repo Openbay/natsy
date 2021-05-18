@@ -126,6 +126,14 @@ module Natsy
         threads << thread
       end
 
+      # **USE WITH CAUTION:** This method (+::reset!+) clears all subscriptions,
+      # stops listening (if started), and kills any active threads.
+      def reset!
+        replies.clear
+        stop!
+        kill!
+      end
+
       private
 
       def threads
@@ -203,7 +211,11 @@ module Natsy
             log("Subscribing to subject '#{replier[:subject]}'#{queue_desc}", level: :debug)
 
             NATS.subscribe(replier[:subject], queue: replier[:queue]) do |message, reply_subject, subject|
-              parsed_message = JSON.parse(message)
+              parsed_message = begin
+                JSON.parse(message)
+              rescue StandardError
+                message
+              end
 
               id, data, pattern = if parsed_message.is_a?(Hash)
                 parsed_message.values_at("id", "data", "pattern")
@@ -211,18 +223,21 @@ module Natsy
                 [nil, parsed_message, nil]
               end
 
+              message_data = id && data && pattern ? data : parsed_message
+
               log("Received a message!")
               message_desc = <<~LOG_MESSAGE
                 id:      #{id || '(none)'}
                 pattern: #{pattern || '(none)'}
                 subject: #{subject || '(none)'}
-                data:    #{data.to_json}
+                data:    #{message_data.to_json}
                 inbox:   #{reply_subject || '(none)'}
                 queue:   #{replier[:queue] || '(none)'}
+                message: #{message}
               LOG_MESSAGE
               log(message_desc, indent: 2)
 
-              raw_response = replier[:handler].call(data)
+              raw_response = replier[:handler].call(message_data, subject)
 
               log("Responding with '#{raw_response}'")
 

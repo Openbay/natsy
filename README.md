@@ -9,9 +9,10 @@ The `natsy` gem allows you to listen for (and reply to) NATS messages asynchrono
 - [x] "controller"-style classes for reply organization
 - [x] runtime subscription additions
 - [x] multiple queues
-- [ ] `on_error` handler so you can send a response (what's standard?)
 - [x] config options for URL/host/port/etc.
 - [ ] config for restart behavior (default is to restart listening on any `StandardError`)
+- [ ] `on_error` handler so you can send a response (what's standard?)
+- [ ] support lifecycle callbacks (like `on_connect`, `on_disconnect`, etc.) provided by the `nats` gem
 
 ## Installation
 
@@ -239,7 +240,7 @@ Natsy::Client.start!
 
 Create controller classes which inherit from `Natsy::Controller` in order to give your message listeners some structure.
 
-Use the `::default_queue` macro to set a default queue string. If omitted, the controller will fall back on the global default queue assigned to `Natsy::Config::default_queue` (as described [here](#default-queue-section)). If no default queue is set in either the controller or globally, then the default queue will be blank. Set the default queue to `nil` in a controller to override the global default queue and explicitly make the default queue blank for that controller.
+Use the `::default_queue` macro to set a default queue string. If omitted, the controller will fall back on the global default queue assigned to `Natsy::Config::default_queue` (as described [here](#default-queue-section)). If no default queue is set in either the controller or globally, then the default queue will be blank. Set the default queue to `nil` in a controller to fall back to the global default queue.
 
 Use the `::subject` macro to create a block for listening to that subject segment. Nested calls to `::subject` will append each subsequent subject/pattern string to the last (joined by a periods). There is no limit to the level of nesting.
 
@@ -275,9 +276,13 @@ class HelloController < Natsy::Controller
   end
 
   subject "hows" do
-    subject "*" do
+    # The queue at this point is "foobar"
+    subject "*", queue: "barbaz" do # Override the default queue at any point
+      # The queue at this point is "barbaz" (!)
       subject "doing" do
-        response do |data, subject|
+        # The queue at this point is "barbaz"
+        response queue: "bazbam" do |data, subject|
+          # The queue at this point is "bazbam" (!)
           # The subject at this point is "hows.<wildcard>.doing" (i.e., the
           # subjects "hows.jack.doing" and "hows.jill.doing" will both match)
           sender_name = data["name"]
