@@ -241,8 +241,7 @@ module Natsy
 
               log("Responding with '#{raw_response}'")
 
-              response = raw_response.is_a?(String) ? raw_response : raw_response.to_json
-              NATS.publish(reply_subject, response) if Utils.present?(reply_subject)
+              NATS.publish(reply_subject, raw_response.to_json) if Utils.present?(reply_subject)
             end
           end
         end
