@@ -13,6 +13,7 @@ The `natsy` gem allows you to listen for (and reply to) NATS messages asynchrono
 - [ ] config for restart behavior (default is to restart listening on any `StandardError`)
 - [ ] `on_error` handler so you can send a response (what's standard?)
 - [ ] support lifecycle callbacks (like `on_connect`, `on_disconnect`, etc.) provided by the `nats` gem
+- [ ] ability to _request_ (not just reply)
 
 ## Installation
 
