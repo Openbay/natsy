@@ -73,16 +73,13 @@ module Natsy
       # @example
       #   Natsy::Config.set(logger: Rails.logger)
       #
+      attr_reader :logger
+
+      # {include:Natsy::Config::Options#logger}
       def logger=(new_logger)
         @logger = new_logger
         Utils.log(@logger, "Set the logger to #{@logger.inspect}", level: :debug)
       end
-
-      # Optional logger for lifecycle events, messages received, etc.
-      #
-      # @see Natsy::Config::Options#logger=
-      #
-      attr_reader :logger
 
       # Set a default queue for subscriptions.
       #
@@ -109,16 +106,13 @@ module Natsy
       #     options.default_queue = nil
       #   end
       #
+      attr_reader :default_queue
+
+      # {include:Natsy::Config::Options#default_queue}
       def default_queue=(new_queue)
         @default_queue = Utils.presence(new_queue.to_s)
         Utils.log(logger, "Setting the default queue to #{@default_queue || '(none)'}", level: :debug)
       end
-
-      # Optional default queue for message subscription and replies.
-      #
-      # @see Natsy::Config::Options#default_queue=
-      #
-      attr_reader :default_queue
 
       # Returns ONLY the config options THAT HAVE BEEN SET as a +Hash+. Will not
       # have keys for properties that are unassigned, but will have keys for
